@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -32,7 +33,7 @@ namespace HttpFramework
             {
                 TcpClient client = server.EndAcceptTcpClient(asyncResult);
                 if (client != null)
-                    Console.WriteLine("Received connection request from: " + client.Client.RemoteEndPoint.ToString());
+                    Console.WriteLine("[INFO]\tconnection request from " + client.Client.RemoteEndPoint.ToString());
                 HandleClientRequest(client);
             }
             catch
@@ -55,7 +56,7 @@ namespace HttpFramework
             List<byte> totalBuffer = new List<byte>();
             while (stream.DataAvailable)
             {
-                Console.WriteLine("[INFO]\tlisten loop");
+                Console.WriteLine("[DEBUG]\tlisten loop");
                 stream.Read(buffer, 0, buffer.Length);
                 stream.Flush();
                 totalBuffer.AddRange(buffer);
@@ -63,14 +64,24 @@ namespace HttpFramework
             // #Region router
             HttpRequest req = new HttpRequest(totalBuffer.ToArray());
             HttpResponse res = new HttpResponse();
-            Router(ref req, ref res);
+            try
+            {
+                Router(ref req, ref res);
+            }
+            catch(Exception e)
+            {
+                res.Status(StatusCodes.InternalServerError);
+                res.Text(e.ToString());
+                PrintResponseInfo(req, res);
+                Console.WriteLine(e.ToString());
+            }
 
             // #End Region
             stream.Write(res.ToBytes());
 
             stream.Close();
             client.Close();
-            Console.WriteLine("wowee");
+            Console.WriteLine("[INFO]\tClosing client");
         }
         public static void Add(HttpMethods method, string path, HttpRequstHandler callback)
         {
@@ -87,24 +98,64 @@ namespace HttpFramework
             if (route != null)
             {
                 var currentRoute = routes[route];
-                if (currentRoute.ContainsKey(req.method))
+                if (currentRoute.ContainsKey(req.method) || currentRoute.ContainsKey(HttpMethods.ALL))
                 {
+                    HttpMethods method = req.method;
+                    if(!currentRoute.ContainsKey(method))
+                    {
+                        method = HttpMethods.ALL;
+                    }
                     //full match
-                    currentRoute[req.method](ref req, ref res); //executes the callback
+                    currentRoute[method](ref req, ref res); //executes the callback
+                    PrintResponseInfo(req, res);
                     return;
                 }
-                //no method match
-                res.Status(StatusCodes.MethodNotAllowed);
-                res.Text("Could not " + req.method + " " + req.path);
-                return;
+                else
+                {
+                    //no method match
+                    res.Status(StatusCodes.MethodNotAllowed);
+                    res.Text("Could not " + req.method + " " + req.path);
+                    PrintResponseInfo(req, res);
+                    return;
+                }
             }
             res.Status(StatusCodes.NotFound);
             res.Text(req.path + " not found");
+            PrintResponseInfo(req, res);
         }
         private static string? FindRoute(string path)
         {
             if(routes.ContainsKey(path)) return path;
             return null;
+        }
+        private static void PrintResponseInfo(HttpRequest req, HttpResponse res)
+        {
+            ConsoleColor defaultColor = Console.ForegroundColor;
+            ConsoleColor color = defaultColor;
+            if((int)res.statusCode < 200)
+            {
+                color = ConsoleColor.Blue;
+            }
+            else if((int)res.statusCode < 300)
+            {
+                color = ConsoleColor.Green;
+            }
+            else if ((int)res.statusCode < 400)
+            {
+                color = ConsoleColor.Gray;
+            }
+            else if ((int)res.statusCode < 500)
+            {
+                color = ConsoleColor.Yellow;
+            }
+            else if ((int)res.statusCode < 600)
+            {
+                color = ConsoleColor.Red;
+            }
+            Console.Write(DateTime.Now.ToString()+$"\t {req.method}\t {req.path}\t ");
+            Console.ForegroundColor = color;
+            Console.WriteLine((int)res.statusCode);
+            Console.ForegroundColor = defaultColor;
         }
     }
 }

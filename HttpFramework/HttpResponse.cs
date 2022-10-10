@@ -25,14 +25,19 @@ namespace HttpFramework
     }
     public class HttpResponse
     {
-        StatusCodes statusCode = StatusCodes.OK;
+        public StatusCodes statusCode = StatusCodes.OK;
         public Dictionary<string, string> headers = new Dictionary<string, string>();
         public byte[]? body;
         public HttpResponse()
         {
+            headers.Add("Server", "tsmedberg");
         }
         public byte[] ToBytes()
         {
+            //#Region final processing before sendoff
+            AddOrModifyHeader("Date", DateTime.UtcNow.ToString("ddd, d MMM yyyy HH:mm:ss")+" GMT");
+
+            //#End Region
             string responseHeaderString = $"HTTP/1.1 {(int)this.statusCode} {this.statusCode.ToString()}\r\n";
             foreach(KeyValuePair<string, string> kvp in headers)
             {
@@ -54,8 +59,23 @@ namespace HttpFramework
         }
         public void Text(string text)
         {
-            this.headers.Add("Content-Type", "text/plain;charset=utf8");
+            AddOrModifyHeader("Content-Type", "text/plain;charset=utf8");
             this.body = Encoding.UTF8.GetBytes(text);
+        }
+        public void Redirect(string location)
+        {
+            AddOrModifyHeader("Location", location);
+        }
+        private void AddOrModifyHeader(string header, string value)
+        {
+            if(this.headers.ContainsKey(header))
+            {
+                this.headers[header] = value;
+            }
+            else
+            {
+                this.headers.Add(header, value);
+            }
         }
     }
 }

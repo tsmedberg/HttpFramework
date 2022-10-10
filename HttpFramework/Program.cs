@@ -14,7 +14,7 @@ namespace HttpFramework
         {
             try
             {
-                Server.Add(HttpMethods.GET,"/",delegate(ref HttpRequest req,ref HttpResponse res){
+                Server.Add(HttpMethods.ALL,"/",delegate(ref HttpRequest req,ref HttpResponse res){
                     //status 200 is default
                     res.Text("Hej världen!");
                 });
@@ -23,6 +23,14 @@ namespace HttpFramework
                 });
                 Server.Add(HttpMethods.GET, "/ua", delegate (ref HttpRequest req, ref HttpResponse res) {
                     res.Text("Your user agent string is\n" + req.headers["User-Agent"]);
+                });
+                Server.Add(HttpMethods.GET, "/youtube", delegate (ref HttpRequest req, ref HttpResponse res) {
+                    res.Status(StatusCodes.MovedPermanently);
+                    res.Redirect("https://youtube.com");
+                });
+                Server.Add(HttpMethods.GET, "/error", delegate (ref HttpRequest req, ref HttpResponse res) {
+                    res.Text("this is fine");
+                    throw new Exception("shit");
                 });
                 Server.StartServer(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 3000));
                 //to stop program from exiting

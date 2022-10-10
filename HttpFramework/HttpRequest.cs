@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using System.Web;
 
 namespace HttpFramework
 {
     public enum HttpMethods
     {
+        ALL,
         GET,
         HEAD,
         POST,
@@ -23,6 +26,7 @@ namespace HttpFramework
     public class HttpRequest
     {
         public Dictionary<string, string> headers = new Dictionary<string, string>();
+        public Dictionary<string, string> queryParameters = new Dictionary<string, string>();
         public string path;
         public HttpMethods method;
         public byte[]? body;
@@ -48,12 +52,48 @@ namespace HttpFramework
             Console.WriteLine(headers);
             string methodString = headers.Split(" ")[0];
             bool wasParsed = Enum.TryParse(methodString,true,out HttpMethods method);
+            if (method == HttpMethods.ALL) // The method ALL is for internal use only, and should not be accepted in an incoming request
+                wasParsed = false;
             if (!wasParsed)
             {
                 throw new ArgumentException(methodString + " Method not implemented");
             }
             this.method = method;
             this.path = headers.Split(" ")[1];
+
+            //has query parameters
+            if(this.path.Contains("?"))
+            {
+                string queryParts = this.path.Split("?")[1];
+                this.path = WebUtility.UrlDecode(this.path.Split("?")[0]); // do url decoding at this stage to stop weird characters from becoming a problem
+                string[] parts;
+                if(queryParts.Contains("&"))
+                {
+                    parts = queryParts.Split("&");
+                }
+                else
+                {
+                    parts = new string[] {queryParts};
+                }
+                foreach (string part in parts)
+                {
+                    try
+                    {
+                        string key = part.Split("=")[0];
+                        string value = part.Split("=")[1];
+                        key = HttpUtility.UrlDecode(key);
+                        value = HttpUtility.UrlDecode(value);
+                        queryParameters.Add(key, value);
+                    }
+                    catch(Exception e)
+                    {
+                        Console.WriteLine("[ERROR]\tWhen parsing query parameters");
+                        Console.WriteLine(e.ToString());
+                        continue;
+                    }
+                }
+            }
+
             this.httpVersion = headers.Split(" ")[2];
             List<string> headerArray = headers.Split("\r\n").ToList();
             headerArray.RemoveAt(0);
