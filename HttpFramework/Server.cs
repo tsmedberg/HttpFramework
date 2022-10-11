@@ -63,17 +63,25 @@ namespace HttpFramework
                 totalBuffer.AddRange(buffer);
             }
             // #Region router
-            HttpRequest req = new HttpRequest(totalBuffer.ToArray());
             HttpResponse res = new HttpResponse();
+            HttpRequest? req = null;
             try
             {
+                req = new HttpRequest(totalBuffer.ToArray());
                 Router(ref req, ref res);
             }
             catch(Exception e)
             {
                 res.Status(StatusCodes.InternalServerError);
                 res.Text(e.ToString());
-                PrintResponseInfo(req, res);
+                if(req != null)
+                {
+                    PrintResponseInfo(req, res);
+                }
+                else
+                {
+                    Console.WriteLine("[ERROR]\tparsing request");
+                }
                 Console.WriteLine(e.ToString());
             }
 
@@ -140,7 +148,7 @@ namespace HttpFramework
         {
             foreach (string key in routes.Keys)
             {
-                Regex rx = ParseDymanicRoute(key);
+                Regex rx = ParseDymanicRoute(key.Replace("*",".*"));
                 if (rx.IsMatch(path))
                     return key;
             }

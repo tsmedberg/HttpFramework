@@ -50,14 +50,13 @@ namespace HttpFramework
             {
                 headers = Encoding.UTF8.GetString(data);
             }
-            Console.WriteLine(headers);
             string methodString = headers.Split(" ")[0];
             bool wasParsed = Enum.TryParse(methodString,true,out HttpMethods method);
             if (method == HttpMethods.ALL) // The method ALL is for internal use only, and should not be accepted in an incoming request
                 wasParsed = false;
             if (!wasParsed)
             {
-                throw new ArgumentException(methodString + " Method not implemented");
+                throw new ArgumentException(methodString + " method not implemented");
             }
             this.method = method;
             this.path = headers.Split(" ")[1];
@@ -118,6 +117,8 @@ namespace HttpFramework
             if(this.headers.ContainsKey("Content-Length"))
             {
                 int length = int.Parse(this.headers["Content-Length"]);
+                if (length < 0 || length > this.body.Length)
+                    throw new ArgumentException("Content-Length was out of range");
                 byte[] newBody = new byte[length];
                 Buffer.BlockCopy(this.body, 0, newBody, 0, length);
                 this.body = newBody;
