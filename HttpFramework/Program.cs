@@ -32,6 +32,9 @@ namespace HttpFramework
                     res.Text("this is fine");
                     throw new Exception("shit");
                 });
+                Server.Add(HttpMethods.GET, "/car/:brand/:model/:color", delegate (ref HttpRequest req, ref HttpResponse res) {
+                    res.Text($"path paramers\nbrand: {req.urlParameters["brand"]}, model: {req.urlParameters["model"]}, color: {req.urlParameters["color"]}");
+                });
                 Server.StartServer(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 3000));
                 //to stop program from exiting
                 Console.Read();

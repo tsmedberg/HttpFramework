@@ -8,6 +8,7 @@ using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace HttpFramework
@@ -97,6 +98,10 @@ namespace HttpFramework
             string? route = FindRoute(req.path);
             if (route != null)
             {
+                if(IsDynamic(route))
+                {
+                    req.urlParameters = ExtractUrlParameters(req.path, route);
+                }
                 var currentRoute = routes[route];
                 if (currentRoute.ContainsKey(req.method) || currentRoute.ContainsKey(HttpMethods.ALL))
                 {
@@ -126,7 +131,48 @@ namespace HttpFramework
         private static string? FindRoute(string path)
         {
             if(routes.ContainsKey(path)) return path;
+            string? route = RegexRoutes(path);
+            if (route != null)
+                return route;
             return null;
+        }
+        private static string? RegexRoutes(string path)
+        {
+            foreach (string key in routes.Keys)
+            {
+                Regex rx = ParseDymanicRoute(key);
+                if (rx.IsMatch(path))
+                    return key;
+            }
+            return null;
+        }
+        private static Regex ParseDymanicRoute(string route)
+        {
+            Regex urlParams = new Regex(@":[a-zA-Z0-9]+");
+            return new Regex("^"+urlParams.Replace(route, delegate (Match m)
+            {
+                return "[a-zA-Z0-9]+";
+            })+"$");
+
+        }
+        private static Dictionary<string,string> ExtractUrlParameters(string path, string route)
+        {
+            Dictionary<string, string> urlParams = new Dictionary<string, string>();
+            string[] pathParts = path.Split("/");
+            List<string> routeParts = route.Split("/").ToList();
+            Regex rx = new Regex(@":[a-zA-Z0-9]+");
+            foreach (string rp in routeParts)
+            {
+                if(rx.IsMatch(rp))
+                {
+                    urlParams.Add(rp.Replace(":", ""), pathParts[routeParts.IndexOf(rp)]);
+                }
+            }
+            return urlParams;
+        }
+        private static bool IsDynamic(string route)
+        {
+            return new Regex(@":[a-zA-Z0-9]+").IsMatch(route);
         }
         private static void PrintResponseInfo(HttpRequest req, HttpResponse res)
         {

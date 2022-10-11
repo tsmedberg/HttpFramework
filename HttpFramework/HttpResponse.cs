@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -35,7 +36,7 @@ namespace HttpFramework
         public byte[] ToBytes()
         {
             //#Region final processing before sendoff
-            AddOrModifyHeader("Date", DateTime.UtcNow.ToString("ddd, d MMM yyyy HH:mm:ss")+" GMT");
+            AddOrModifyHeader("Date", DateTime.UtcNow.ToString("ddd, d MMM yyyy HH:mm:ss",CultureInfo.InvariantCulture)+" GMT");
 
             //#End Region
             string responseHeaderString = $"HTTP/1.1 {(int)this.statusCode} {this.statusCode.ToString()}\r\n";

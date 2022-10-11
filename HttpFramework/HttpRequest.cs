@@ -27,6 +27,7 @@ namespace HttpFramework
     {
         public Dictionary<string, string> headers = new Dictionary<string, string>();
         public Dictionary<string, string> queryParameters = new Dictionary<string, string>();
+        public Dictionary<string, string> urlParameters = new Dictionary<string, string>();
         public string path;
         public HttpMethods method;
         public byte[]? body;
