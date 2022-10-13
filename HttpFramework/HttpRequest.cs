@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
@@ -66,7 +68,7 @@ namespace HttpFramework
             if(this.path.Contains("?"))
             {
                 string queryParts = this.path.Split("?")[1];
-                this.path = WebUtility.UrlDecode(this.path.Split("?")[0]); // do url decoding at this stage to stop weird characters from becoming a problem
+                this.path = UrlDecode(this.path.Split("?")[0]); // do url decoding at this stage to stop weird characters from becoming a problem
                 this.queryParameters = UrlParamDecode(queryParts);
             }
 
@@ -141,8 +143,8 @@ namespace HttpFramework
                 {
                     string key = part.Split("=")[0];
                     string value = part.Split("=")[1];
-                    key = HttpUtility.UrlDecode(key);
-                    value = HttpUtility.UrlDecode(value);
+                    key = UrlDecode(key);
+                    value = UrlDecode(value);
                     result.Add(key, value);
                 }
                 catch (Exception e)
@@ -151,6 +153,35 @@ namespace HttpFramework
                     Console.WriteLine(e.ToString());
                     continue;
                 }
+            }
+            return result;
+        }
+        public static string UrlDecode(string input)
+        {
+            int index = -1;
+            string result = "";
+            int continueAfter = 0;
+            List<int> percentCharacters = new List<int>();
+            while(true)
+            {
+                index = input.IndexOf("%", index+1);
+                if (index == -1) break;
+                percentCharacters.Add(index);
+            }
+
+            for(int i = 0; i < input.Length; i++)
+            {
+                if(i < continueAfter)
+                {
+                    continue;
+                }
+                char c = input[i];
+                if(percentCharacters.Contains(i))
+                {
+                    c = (char)Convert.ToInt32(input.Substring(i + 1, 2), 16);
+                    continueAfter = i + 3;
+                }
+                result += c;
             }
             return result;
         }
