@@ -30,21 +30,22 @@ namespace HttpFramework
         public Dictionary<string, string> urlParameters = new Dictionary<string, string>();
         public string path;
         public HttpMethods method;
-        public byte[]? body;
+        public HttpRequestBody body;
         private string httpVersion;
 
         public HttpRequest(byte[] data)
         {
             int bodyIndex = findBodyStart(data);
+            byte[]? tempBody = null;
             byte[] byteheaders = new byte[bodyIndex < 0 ? data.Length : bodyIndex];
             string headers;
             if (bodyIndex > -1)
             {
                 Buffer.BlockCopy(data, 0, byteheaders, 0, bodyIndex);
                 headers = Encoding.UTF8.GetString(byteheaders);
-                byte[] body = new byte[data.Length];
-                Buffer.BlockCopy(data, bodyIndex+4, body, 0, data.Length-bodyIndex-4);
-                this.body = body;
+                tempBody = new byte[data.Length];
+                Buffer.BlockCopy(data, bodyIndex+4, tempBody, 0, data.Length-bodyIndex-4);
+                //this.body = new HttpRequestBody(this,tempBody);
             }
             else
             {
@@ -66,32 +67,7 @@ namespace HttpFramework
             {
                 string queryParts = this.path.Split("?")[1];
                 this.path = WebUtility.UrlDecode(this.path.Split("?")[0]); // do url decoding at this stage to stop weird characters from becoming a problem
-                string[] parts;
-                if(queryParts.Contains("&"))
-                {
-                    parts = queryParts.Split("&");
-                }
-                else
-                {
-                    parts = new string[] {queryParts};
-                }
-                foreach (string part in parts)
-                {
-                    try
-                    {
-                        string key = part.Split("=")[0];
-                        string value = part.Split("=")[1];
-                        key = HttpUtility.UrlDecode(key);
-                        value = HttpUtility.UrlDecode(value);
-                        queryParameters.Add(key, value);
-                    }
-                    catch(Exception e)
-                    {
-                        Console.WriteLine("[ERROR]\tWhen parsing query parameters");
-                        Console.WriteLine(e.ToString());
-                        continue;
-                    }
-                }
+                this.queryParameters = UrlParamDecode(queryParts);
             }
 
             this.httpVersion = headers.Split(" ")[2];
@@ -117,11 +93,11 @@ namespace HttpFramework
             if(this.headers.ContainsKey("Content-Length"))
             {
                 int length = int.Parse(this.headers["Content-Length"]);
-                if (length < 0 || length > this.body.Length)
+                if (length < 0 || length > tempBody.Length)
                     throw new ArgumentException("Content-Length was out of range");
                 byte[] newBody = new byte[length];
-                Buffer.BlockCopy(this.body, 0, newBody, 0, length);
-                this.body = newBody;
+                Buffer.BlockCopy(tempBody, 0, newBody, 0, length);
+                this.body = new HttpRequestBody(this,newBody);
 
             }
         }
@@ -145,6 +121,38 @@ namespace HttpFramework
             }
             return -1;
             
+        }
+
+        public static Dictionary<string,string> UrlParamDecode(string queryParts)
+        {
+            string[] parts;
+            Dictionary<string, string> result = new Dictionary<string, string>();
+            if (queryParts.Contains("&"))
+            {
+                parts = queryParts.Split("&");
+            }
+            else
+            {
+                parts = new string[] { queryParts };
+            }
+            foreach (string part in parts)
+            {
+                try
+                {
+                    string key = part.Split("=")[0];
+                    string value = part.Split("=")[1];
+                    key = HttpUtility.UrlDecode(key);
+                    value = HttpUtility.UrlDecode(value);
+                    result.Add(key, value);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("[ERROR]\tWhen parsing query parameters");
+                    Console.WriteLine(e.ToString());
+                    continue;
+                }
+            }
+            return result;
         }
     }
 }

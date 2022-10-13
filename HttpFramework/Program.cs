@@ -52,6 +52,31 @@ namespace HttpFramework
                     }
                     res.Text(resText);
                 });
+                Server.Add(HttpMethods.POST, "/body", delegate (ref HttpRequest req, ref HttpResponse res) {
+                    res.Text(req.body.contentType+"\n"+req.body.Text());
+                    //Dictionary<string,MultiPartData> data = req.body.MultiPart();
+                    //foreach(KeyValuePair<string,string> d in data)
+                    //{
+                    //    Console.WriteLine(d.Key+" : "+d.Value);
+                    //}
+                    //res.Text(data["file"].ContentType);
+                });
+                Server.Add(HttpMethods.POST, "/urlencoded", delegate (ref HttpRequest req, ref HttpResponse res) {
+                    res.Text(req.body.Text());
+                    Dictionary<string, string> data = req.body.UrlEncoded();
+                    foreach(KeyValuePair<string, string> header in data)
+                    {
+                        Console.WriteLine($"{header.Key}: {header.Value}");
+                    }
+                });
+                Server.Add(HttpMethods.POST, "/multipart", delegate (ref HttpRequest req, ref HttpResponse res) {
+                    res.Text(req.body.Text());
+                    Dictionary<string, MultiPartData> data = req.body.MultiPart();
+                    foreach (KeyValuePair<string, MultiPartData> header in data)
+                    {
+                        Console.WriteLine($"{header.Key}: {header.Value.Data}");
+                    }
+                });
                 Server.Add(HttpMethods.GET, "/*", delegate (ref HttpRequest req, ref HttpResponse res) {
                     res.Text("Min catch-all route är väldigt \"kraftfull\"");
                 });
